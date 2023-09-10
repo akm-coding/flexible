@@ -19,8 +19,7 @@ export default function AuthProviders() {
 
   useEffect(() => {
     const fetchProviders = async () => {
-      const res = getProviders();
-      console.log("Res===>", res);
+      const res = await getProviders();
       setProviders(res);
     };
     fetchProviders();
