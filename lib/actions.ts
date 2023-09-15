@@ -1,4 +1,12 @@
-import { createProjectMutation, getUserQuery } from "@/graphql";
+import {
+  createProjectMutation,
+  deleteProjectMutation,
+  getProjectByIdQuery,
+  getProjectsOfUserQuery,
+  getUserQuery,
+  projectsQuery,
+  updateProjectMutation,
+} from "@/graphql";
 import { GraphQLClient } from "graphql-request";
 import { createUserMutation } from "../graphql/index";
 import { ProjectForm } from "@/common.types";
@@ -25,6 +33,14 @@ const makeGraphQLRequest = async (query: string, variables = {}) => {
   } catch (error) {
     throw error;
   }
+};
+
+export const fetchAllProjects = (
+  category?: string | null,
+  endCursor?: string | null
+) => {
+  client.setHeader("x-api-key", apiKey);
+  return makeGraphQLRequest(projectsQuery, { category, endCursor });
 };
 
 export const getUser = (email: string) => {
@@ -84,4 +100,44 @@ export const createNewProject = async (
     };
     return makeGraphQLRequest(createProjectMutation, variables);
   }
+};
+
+export const getProjectDetails = (id: string) => {
+  client.setHeader("x-api-key", apiKey);
+  return makeGraphQLRequest(getProjectByIdQuery, { id });
+};
+
+export const getUserProjects = (id: string, last?: number) => {
+  client.setHeader("x-api-key", apiKey);
+  return makeGraphQLRequest(getProjectsOfUserQuery, { id, last });
+};
+
+export const deleteProject = (id: string, token: string) => {
+  client.setHeader("Authorization", `Bearer ${token}`);
+  return makeGraphQLRequest(deleteProjectMutation, { id, token });
+};
+
+export const updateProject = async (
+  form: ProjectForm,
+  projectId: string,
+  token: string
+) => {
+  function isBase64DataURL(value: string) {
+    const base64Regex = /^data:image\/[a-z]+;base64,/;
+    return base64Regex.test(value);
+  }
+  let updatedForm = { ...form };
+  const isUploadingNewImage = isBase64DataURL(form.image);
+  if (isUploadingNewImage) {
+    const imageUrl = await uploadImage(form.image);
+    if (imageUrl.url) {
+      updatedForm = { ...updatedForm, image: imageUrl.url };
+    }
+  }
+  client.setHeader("Authorization", `Bearer ${token}`);
+  const variables = {
+    id: projectId,
+    input: updatedForm,
+  };
+  return makeGraphQLRequest(updateProjectMutation, variables);
 };
